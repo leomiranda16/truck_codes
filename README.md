@@ -46,3 +46,14 @@ A ferramenta está hospedada na nuvem, dispensando qualquer instalação no seu 
 * **Link de Acesso:** [https://truckcodes.streamlit.app]
 * **Conta no Streamlit:** É necessário possuir uma conta cadastrada no [Streamlit.io](https://streamlit.io/) (você pode usar seu e-mail corporativo).
 * **Autorização:** Por questões de segurança, o acesso é restrito. Caso não consiga visualizar o app, entre em contato comigo para que eu possa **liberar o seu e-mail** na lista de usuários permitidos.
+
+---
+
+## 👤 Informações do Desenvolvedor
+
+| Item | Detalhes |
+| :--- | :--- |
+| **Nome** | Leonardo Miranda |
+| **Cargo** | Estagiário VCRP |
+| **Empresa** | Mercedes-Benz |
+| **Desenvolvido em** | Outubro de 2024 |
