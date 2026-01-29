@@ -52,6 +52,9 @@ A ferramenta está hospedada na nuvem, dispensando qualquer instalação no seu 
 ## 👤 Informações do Desenvolvedor
 
 **Nome:** Leonardo Miranda
+
 **Cargo:** Estagiário VCRP
+
 **Empresa:** Mercedes-Benz
+
 **Desenvolvido em:** Outubro de 2024
