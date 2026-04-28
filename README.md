@@ -57,4 +57,4 @@ A ferramenta está hospedada na nuvem, dispensando qualquer instalação no seu 
 
 **Empresa:** Mercedes-Benz
 
-**Desenvolvido em:** Outubro de 2024
+**Desenvolvido em:** Outubro de 2025
