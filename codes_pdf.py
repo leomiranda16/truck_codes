@@ -1,4 +1,5 @@
 import streamlit as st
+import re
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -29,6 +30,9 @@ if st.button("Extrair Códigos", type="primary"):
         extracted_codes = []
         lines = input_text.splitlines()
 
+        baumuster_match = re.search(r'\bC\d{10}\b', input_text)
+        baumuster = baumuster_match.group(0) if baumuster_match else None
+
         for line in lines:
             # remove espaços em branco no início e fim da linha
             clean_line = line.strip()
@@ -40,17 +44,31 @@ if st.button("Extrair Códigos", type="primary"):
                 extracted_code = code_part[2:5]
                 extracted_codes.append(extracted_code)
 
-        if extracted_codes:
-            st.success(f"**{len(extracted_codes)} códigos extraídos com sucesso!**")
+        if extracted_codes or baumuster:
+            
+            # Avisos de sucesso ou alerta na tela
+            if baumuster:
+                st.info(f"**Baumuster:** {baumuster}")
+            else:
+                st.warning("Nenhum Baumuster no formato 'CXXXXXXXXXX' foi encontrado.")
+                
+            if extracted_codes:
+                st.success(f"**{len(extracted_codes)} códigos extraídos!**")
+            else:
+                st.warning("Nenhum código válido (iniciando com 'IN') foi encontrado.")
 
-            # junta todos os códigos em uma única string, separados por quebra de linha
-            codes_with_linebreak = "\n".join(extracted_codes)
+            # --- Montagem do Texto Final para Copiar ---
+            final_output = ""
+                
+            # Junta todos os códigos extraídos, separados por quebra de linha
+            if extracted_codes:
+                final_output += "\n".join(extracted_codes)
 
             st.subheader("Resultado (Pronto para Copiar)")
             # st.code() exibe o texto e adiciona automaticamente um botão para copiar
-            st.code(codes_with_linebreak, language=None)
+            st.code(final_output.strip(), language=None)
 
         else:
-            st.warning("Nenhum código válido (iniciando com 'IN') foi encontrado no texto fornecido.")
+            st.warning("Nenhum código válido ou Baumuster foi encontrado no texto fornecido.")
     else:
         st.error("Por favor, cole o texto na área designada antes de extrair.")
