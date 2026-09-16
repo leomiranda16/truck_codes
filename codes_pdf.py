@@ -204,62 +204,89 @@ if resultado:
     variantes = resultado["variantes"]
     baumusters = resultado["baumusters"]
     registros = resultado["registros"]
+    declarado = registros[0] if len(registros) == 1 else None
 
     st.divider()
 
-    # --- Cabeçalho: variante, baumuster e contagem ---
-    col_variante, col_baumuster, col_total = st.columns(3)
+    # --- Cartão com o cabeçalho (variante, baumuster, contagens) e ---
+    # --- qualquer inconsistência crítica que mereça atenção antes de copiar. ---
+    with st.container(border=True):
+        col_variante, col_baumuster, col_encontrados, col_saida = st.columns(4)
 
-    with col_variante:
-        st.caption("Nº da Variante")
-        if variantes:
-            st.code(variantes[0], language=None)
-        else:
-            st.warning("Não encontrada.")
+        with col_variante:
+            st.metric("🔢 Nº da Variante", variantes[0] if variantes else "—")
 
-    with col_baumuster:
-        st.caption("Baumuster (sem o 'C')")
-        if baumusters:
-            st.code(baumusters[0], language=None)
-        else:
-            st.warning("Não encontrado.")
+        with col_baumuster:
+            st.metric("🏭 Baumuster", baumusters[0] if baumusters else "—")
 
-    with col_total:
-        st.caption("Codes na saída")
-        st.code(str(len(saida)), language=None)
-
-    # Mais de um valor distinto = provavelmente duas composições coladas juntas.
-    if len(variantes) > 1:
-        st.error(
-            f"Foram encontradas **{len(variantes)} variantes diferentes** no texto: "
-            f"{', '.join(variantes)}. Confira se você não colou mais de um PDF."
-        )
-    if len(baumusters) > 1:
-        st.error(
-            f"Foram encontrados **{len(baumusters)} baumusters diferentes** no texto: "
-            f"{', '.join(baumusters)}. Confira se você não colou mais de um PDF."
-        )
-
-    # --- Validação contra o "Nº de Registros" declarado pelo PDF ---
-    if len(registros) == 1:
-        declarado = registros[0]
-        if declarado == resultado["total_encontrado"]:
-            st.success(
-                f"Conferência OK: o PDF declara **{declarado} registros** e foram "
-                f"encontrados **{resultado['total_encontrado']}**."
+        with col_encontrados:
+            # Delta só aparece quando há divergência com o "Nº de Registros"
+            # do PDF — some quando bate, para não poluir o caso normal.
+            delta = None
+            if declarado is not None and declarado != resultado["total_encontrado"]:
+                delta = resultado["total_encontrado"] - declarado
+            st.metric(
+                "📄 Registros encontrados",
+                resultado["total_encontrado"],
+                delta=delta,
+                delta_color="inverse",
+                help="Comparado com o 'Nº de Registros' declarado pelo próprio PDF.",
             )
-        else:
+
+        with col_saida:
+            st.metric("📦 Codes na saída", len(saida))
+
+        if not variantes:
+            st.warning("Nº da Variante não encontrado.")
+        if not baumusters:
+            st.warning("Baumuster não encontrado.")
+
+        # Mais de um valor distinto = provavelmente duas composições coladas juntas.
+        if len(variantes) > 1:
             st.error(
-                f"Divergência: o PDF declara **{declarado} registros**, mas foram "
-                f"encontrados **{resultado['total_encontrado']}**. "
-                "Confira se o texto foi colado por completo."
+                f"Foram encontradas **{len(variantes)} variantes diferentes** no texto: "
+                f"{', '.join(variantes)}. Confira se você não colou mais de um PDF."
             )
-    else:
-        st.info(
-            "O texto colado não traz o 'Nº de Registros' — não foi possível "
-            "conferir a contagem automaticamente."
-        )
+        if len(baumusters) > 1:
+            st.error(
+                f"Foram encontrados **{len(baumusters)} baumusters diferentes** no texto: "
+                f"{', '.join(baumusters)}. Confira se você não colou mais de um PDF."
+            )
 
+        if declarado is not None:
+            if declarado == resultado["total_encontrado"]:
+                st.success(f"Conferência OK: o PDF declara **{declarado} registros**.")
+            else:
+                st.error(
+                    f"Divergência: o PDF declara **{declarado} registros**, mas foram "
+                    f"encontrados **{resultado['total_encontrado']}**. "
+                    "Confira se o texto foi colado por completo."
+                )
+        else:
+            st.info(
+                "O texto não traz o 'Nº de Registros' — não foi possível conferir "
+                "a contagem automaticamente."
+            )
+
+    # --- Resultado pronto para copiar (logo após o cartão, é o que importa) ---
+    st.subheader("Resultado (Pronto para Copiar)")
+
+    if saida:
+        texto_saida = "\n".join(code for code, _ in saida)
+        st.code(texto_saida, language=None)
+
+        nome_arquivo = f"codes_{variantes[0]}.txt" if variantes else "codes.txt"
+        st.download_button(
+            "⬇️ Baixar .txt",
+            data=texto_saida,
+            file_name=nome_arquivo,
+            mime="text/plain",
+        )
+    else:
+        st.warning("Nenhum code válido foi encontrado no texto fornecido.")
+
+    # --- Avisos secundários: não impedem o uso do resultado acima, mas ---
+    # --- valem uma conferência. ---
     if resultado["repetidos"]:
         st.warning(
             f"{resultado['repetidos']} code(s) repetido(s) foram removidos da saída."
@@ -269,25 +296,9 @@ if resultado:
         nomes = ", ".join(f"{c} ({d})" if d else c for c, d in resultado["descartados"])
         st.info(f"Fora da saída (não é code de componente): {nomes}")
 
-    # --- Resultado pronto para copiar ---
-    st.subheader("Resultado (Pronto para Copiar)")
-
     if saida:
-        texto_saida = "\n".join(code for code, _ in saida)
-        st.code(texto_saida, language=None)
-
-        nome_arquivo = f"codes_{variantes[0]}.txt" if variantes else "codes.txt"
-        st.download_button(
-            "Baixar .txt",
-            data=texto_saida,
-            file_name=nome_arquivo,
-            mime="text/plain",
-        )
-
         with st.expander(f"Conferir os {len(saida)} codes e suas descrições"):
             st.dataframe(
                 pd.DataFrame(saida, columns=["Code", "Denominação"]),
                 hide_index=True,
             )
-    else:
-        st.warning("Nenhum code válido foi encontrado no texto fornecido.")
