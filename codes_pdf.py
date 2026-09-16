@@ -7,9 +7,44 @@ from pypdf.errors import PdfReadError
 
 # --- Configuração da Página ---
 st.set_page_config(
-    page_title="Ferramenta para Modificação de Code",
+    page_title="Modificador de Variante",
     page_icon="🚛",
     layout="wide"
+)
+
+# --- Cor de destaque (complementa o tema padrão do .streamlit/config.toml) ---
+# Best-effort: mira nos seletores mais comuns do Streamlit para botões
+# primários e no indicador da aba ativa. Como não há como renderizar CSS de
+# navegador neste ambiente, vale conferir visualmente ao rodar o app.
+PALETAS = {
+    "Azul-aço": "#1B3B6F",
+    "Verde": "#1E7145",
+    "Vermelho suave": "#B3453A",
+}
+
+with st.sidebar:
+    st.subheader("🎨 Aparência")
+    tema = st.selectbox("Cor de destaque", list(PALETAS.keys()), key="cor_destaque")
+    st.caption(
+        "Prefere tema claro/escuro? Use o menu **⋮** (canto superior direito) "
+        "→ **Settings** → **Choose app theme**."
+    )
+
+_cor = PALETAS[tema]
+st.markdown(
+    f"""
+    <style>
+    button[kind="primary"], [data-testid="stBaseButton-primary"],
+    .stDownloadButton > button[kind="primary"] {{
+        background-color: {_cor} !important;
+        border-color: {_cor} !important;
+    }}
+    [data-baseweb="tab-highlight"] {{
+        background-color: {_cor} !important;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # ==================================================================
@@ -140,7 +175,7 @@ def texto_do_pdf(arquivo):
 # Interface
 # ==================================================================
 
-st.title("🚛 Ferramenta para Modificação de Code")
+st.title("🚛 Modificador de Code")
 
 with st.expander("Como usar"):
     st.markdown("""
@@ -275,13 +310,29 @@ if resultado:
         texto_saida = "\n".join(code for code, _ in saida)
         st.code(texto_saida, language=None)
 
-        nome_arquivo = f"codes_{variantes[0]}.txt" if variantes else "codes.txt"
-        st.download_button(
-            "⬇️ Baixar .txt",
-            data=texto_saida,
-            file_name=nome_arquivo,
-            mime="text/plain",
-        )
+        sufixo_arquivo = variantes[0] if variantes else "codes"
+
+        col_txt, col_csv = st.columns(2)
+        with col_txt:
+            st.download_button(
+                "⬇️ Baixar .txt",
+                data=texto_saida,
+                file_name=f"codes_{sufixo_arquivo}.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
+        with col_csv:
+            # utf-8-sig para o Excel abrir os acentos da Denominação corretamente.
+            tabela_csv = pd.DataFrame(saida, columns=["Code", "Denominação"]).to_csv(
+                index=False
+            ).encode("utf-8-sig")
+            st.download_button(
+                "⬇️ Baixar tabela (.csv)",
+                data=tabela_csv,
+                file_name=f"codes_{sufixo_arquivo}.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
     else:
         st.warning("Nenhum code válido foi encontrado no texto fornecido.")
 
