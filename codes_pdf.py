@@ -2,6 +2,8 @@ import re
 
 import pandas as pd
 import streamlit as st
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -123,6 +125,17 @@ def extrair(texto):
     }
 
 
+def texto_do_pdf(arquivo):
+    """Extrai o texto de um PDF enviado via st.file_uploader.
+
+    Usa extraction_mode="plain" (o padrão do pypdf) de propósito: ele devolve
+    o Code e a Denominação em linhas separadas, formato que a extrair() já
+    trata (mesma lógica usada quando o usuário cola o texto manualmente).
+    """
+    leitor = PdfReader(arquivo)
+    return "\n".join(pagina.extract_text() for pagina in leitor.pages)
+
+
 # ==================================================================
 # Interface
 # ==================================================================
@@ -131,32 +144,58 @@ st.title("🚛 Ferramenta para Modificação de Code")
 
 with st.expander("Como usar"):
     st.markdown("""
-    1. Copie todo o texto da composição da variante extraído do PDF.
-    2. Cole o texto na área abaixo.
-    3. Clique em **Extrair Códigos** (ou pressione `Ctrl + Enter`).
-    4. Confira o painel de validação e copie os codes pelo botão da caixa de resultado.
+    **Opção 1 — enviar o PDF (recomendado):** anexe o arquivo `.pdf` da
+    composição da variante e clique em **Extrair do PDF**.
+
+    **Opção 2 — colar o texto:** copie o texto do PDF (Ctrl+A, Ctrl+C dentro
+    do visualizador) e cole na caixa da aba "Colar texto".
     """)
 
 if "resultado" not in st.session_state:
     st.session_state.resultado = None
 
-# O formulário permite enviar com Ctrl+Enter, sem precisar mirar no botão.
-with st.form("formulario_extracao"):
-    texto_colado = st.text_area(
-        "Cole a 'Composição da Variante' aqui:",
-        height=300,
-        placeholder="Cole aqui o texto copiado do PDF da composição da variante...",
-    )
-    enviado = st.form_submit_button("Extrair Códigos", type="primary")
+aba_pdf, aba_texto = st.tabs(["📄 Enviar PDF", "📋 Colar texto"])
 
-if enviado:
-    if texto_colado.strip():
-        # Guardar em session_state faz o resultado sobreviver aos reruns que o
-        # Streamlit dispara ao clicar em outros botões (ex.: Baixar .txt).
-        st.session_state.resultado = extrair(texto_colado)
-    else:
-        st.session_state.resultado = None
-        st.error("Por favor, cole o texto na área designada antes de extrair.")
+with aba_pdf:
+    arquivo_pdf = st.file_uploader("Selecione o PDF da composição da variante:", type="pdf")
+    if st.button("Extrair do PDF", type="primary", disabled=arquivo_pdf is None):
+        try:
+            texto_extraido = texto_do_pdf(arquivo_pdf)
+        except PdfReadError:
+            st.session_state.resultado = None
+            st.error(
+                "Não foi possível ler esse arquivo como PDF. Confira se o "
+                "arquivo não está corrompido e tente novamente."
+            )
+        else:
+            if texto_extraido.strip():
+                st.session_state.resultado = extrair(texto_extraido)
+            else:
+                st.session_state.resultado = None
+                st.error(
+                    "O PDF foi lido, mas nenhum texto foi encontrado nele "
+                    "(pode ser um PDF escaneado/imagem). Tente colar o texto "
+                    "manualmente na outra aba."
+                )
+
+with aba_texto:
+    # O formulário permite enviar com Ctrl+Enter, sem precisar mirar no botão.
+    with st.form("formulario_extracao"):
+        texto_colado = st.text_area(
+            "Cole a 'Composição da Variante' aqui:",
+            height=300,
+            placeholder="Cole aqui o texto copiado do PDF da composição da variante...",
+        )
+        enviado = st.form_submit_button("Extrair Códigos", type="primary")
+
+    if enviado:
+        if texto_colado.strip():
+            # Guardar em session_state faz o resultado sobreviver aos reruns
+            # que o Streamlit dispara ao clicar em outros botões (ex.: Baixar .txt).
+            st.session_state.resultado = extrair(texto_colado)
+        else:
+            st.session_state.resultado = None
+            st.error("Por favor, cole o texto na área designada antes de extrair.")
 
 resultado = st.session_state.resultado
 
